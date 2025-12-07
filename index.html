@@ -1,0 +1,2666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Script Writer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12pt;
+            line-height: 1.5;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            color: black;
+        }
+
+        body.dark {
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+
+        /* Sidebar visibility - visible by default, can be toggled */
+        .sidebar {
+            display: flex;
+        }
+
+        /* Hide sidebar when show-sidebar is not present (in normal mode) */
+        body:not(.show-sidebar):not(.fullscreen) .sidebar {
+            display: none;
+        }
+
+        /* In fullscreen, hide by default */
+        body.fullscreen .sidebar {
+            display: none;
+        }
+
+        /* Show sidebar when show-sidebar class is present */
+        body.show-sidebar .sidebar,
+        body.fullscreen.show-sidebar .sidebar {
+            display: flex;
+        }
+
+        /* Toolbar visibility - visible by default, can be toggled */
+        .bottom-toolbar {
+            display: flex;
+        }
+
+        /* Hide toolbar when show-toolbar is not present (in normal mode) */
+        body:not(.show-toolbar):not(.fullscreen) .bottom-toolbar {
+            display: none;
+        }
+
+        /* In fullscreen, hide by default */
+        body.fullscreen .bottom-toolbar {
+            display: none;
+        }
+
+        /* Show toolbar when show-toolbar class is present */
+        body.show-toolbar .bottom-toolbar,
+        body.fullscreen.show-toolbar .bottom-toolbar {
+            display: flex;
+        }
+
+        .exit-fullscreen-btn {
+            display: none;
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 10pt;
+            cursor: pointer;
+            border: 1px solid rgba(153, 153, 153, 0.3);
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 3px;
+            color: #666;
+            z-index: 1000;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+
+        body.dark .exit-fullscreen-btn {
+            background: rgba(58, 58, 58, 0.7);
+            border: 1px solid rgba(102, 102, 102, 0.3);
+            color: #aaa;
+        }
+
+        body.fullscreen .exit-fullscreen-btn {
+            display: block;
+        }
+
+        .exit-fullscreen-btn:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        body.dark .exit-fullscreen-btn:hover {
+            background: rgba(58, 58, 58, 0.9);
+        }
+
+        /* Sidebar toggle arrow */
+        .sidebar-toggle-arrow {
+            display: flex;
+            position: fixed;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 32px;
+            background: rgba(245, 245, 245, 0.7);
+            border: 1px solid rgba(204, 204, 204, 0.5);
+            border-right: none;
+            border-radius: 3px 0 0 3px;
+            cursor: pointer;
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            font-size: 10pt;
+            color: #888;
+            transition: background 0.2s, right 0.2s, opacity 0.2s;
+            box-shadow: 1px 0 2px rgba(0, 0, 0, 0.05);
+            opacity: 0.6;
+        }
+
+        body.dark .sidebar-toggle-arrow {
+            background: rgba(42, 42, 42, 0.7);
+            border: 1px solid rgba(68, 68, 68, 0.5);
+            color: #888;
+        }
+
+        /* Arrow position when sidebar is visible */
+        body.show-sidebar .sidebar-toggle-arrow,
+        body.fullscreen.show-sidebar .sidebar-toggle-arrow {
+            right: 300px;
+        }
+
+        /* Arrow position when sidebar is hidden */
+        body:not(.show-sidebar) .sidebar-toggle-arrow,
+        body.fullscreen:not(.show-sidebar) .sidebar-toggle-arrow {
+            right: 0;
+        }
+
+        .sidebar-toggle-arrow:hover {
+            background: rgba(245, 245, 245, 0.9);
+            opacity: 1;
+        }
+
+        body.dark .sidebar-toggle-arrow:hover {
+            background: rgba(42, 42, 42, 0.9);
+        }
+
+        /* Toolbar toggle arrow */
+        .toolbar-toggle-arrow {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 32px;
+            height: 16px;
+            background: rgba(240, 240, 240, 0.7);
+            border: 1px solid rgba(204, 204, 204, 0.5);
+            border-bottom: none;
+            border-radius: 3px 3px 0 0;
+            cursor: pointer;
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            font-size: 10pt;
+            color: #888;
+            transition: background 0.2s, bottom 0.2s, opacity 0.2s;
+            box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.05);
+            opacity: 0.6;
+        }
+
+        body.dark .toolbar-toggle-arrow {
+            background: rgba(42, 42, 42, 0.7);
+            border: 1px solid rgba(68, 68, 68, 0.5);
+            color: #888;
+        }
+
+        /* Arrow position when toolbar is visible - show above toolbar */
+        body.show-toolbar .toolbar-toggle-arrow,
+        body.fullscreen.show-toolbar .toolbar-toggle-arrow {
+            bottom: 50px;
+        }
+
+        /* Arrow position when toolbar is hidden - show at bottom */
+        body:not(.show-toolbar) .toolbar-toggle-arrow,
+        body.fullscreen:not(.show-toolbar) .toolbar-toggle-arrow {
+            bottom: 0;
+        }
+
+        .toolbar-toggle-arrow:hover {
+            background: rgba(240, 240, 240, 0.9);
+            opacity: 1;
+        }
+
+        body.dark .toolbar-toggle-arrow:hover {
+            background: rgba(42, 42, 42, 0.9);
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .editor-container {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #editor {
+            width: 100%;
+            height: 100%;
+            padding: 100px 20px 20px 160px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12pt;
+            line-height: 1.5;
+            border: none;
+            outline: none;
+            resize: none;
+            background: white;
+            color: black;
+            overflow-y: auto;
+        }
+
+        #editor.dark {
+            background: black;
+            color: white;
+        }
+
+        /* Scrollbar styling */
+        #editor::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        #editor::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        #editor::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 6px;
+        }
+
+        #editor::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        #editor.dark::-webkit-scrollbar-track {
+            background: #333;
+        }
+
+        #editor.dark::-webkit-scrollbar-thumb {
+            background: #666;
+        }
+
+        #editor.dark::-webkit-scrollbar-thumb:hover {
+            background: #888;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: #f5f5f5;
+            border-left: 1px solid #ccc;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: visible;
+            position: relative;
+        }
+
+        body.dark .sidebar {
+            background: #2a2a2a;
+            border-left: 1px solid #444;
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            background: #e8e8e8;
+            border-bottom: 1px solid #ccc;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: normal;
+            font-size: 11pt;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        body.dark .sidebar-header {
+            background: #333;
+            border-bottom: 1px solid #444;
+            color: #e0e0e0;
+        }
+
+        .sidebar-new-script-btn {
+            width: calc(100% - 20px);
+            padding: 8px;
+            margin: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11pt;
+            cursor: pointer;
+            border: 1px solid #999;
+            background: white;
+            border-radius: 3px;
+            color: black;
+            box-sizing: border-box;
+            text-align: left;
+        }
+
+        body.dark .sidebar-new-script-btn {
+            background: #3a3a3a;
+            border: 1px solid #666;
+            color: #e0e0e0;
+        }
+
+        .sidebar-new-script-btn:hover {
+            background: #f5f5f5;
+        }
+
+        body.dark .sidebar-new-script-btn:hover {
+            background: #4a4a4a;
+        }
+
+        .sidebar-header-title {
+            flex: 1;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: normal;
+            text-align: left;
+        }
+
+        .sidebar-save-btn {
+            padding: 5px 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 10pt;
+            cursor: pointer;
+            border: 1px solid #999;
+            background: white;
+            border-radius: 3px;
+            color: black;
+        }
+
+        body.dark .sidebar-save-btn {
+            background: #3a3a3a;
+            border: 1px solid #666;
+            color: #e0e0e0;
+        }
+
+        .sidebar-save-btn:hover {
+            background: #f5f5f5;
+        }
+
+        body.dark .sidebar-save-btn:hover {
+            background: #4a4a4a;
+        }
+
+        .sidebar-save-btn:active {
+            background: #e0e0e0;
+        }
+
+        body.dark .sidebar-save-btn:active {
+            background: #2a2a2a;
+        }
+
+        .file-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        /* Sidebar scrollbar */
+        .file-list::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .file-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .file-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 6px;
+        }
+
+        .file-list::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        body.dark .file-list::-webkit-scrollbar-track {
+            background: #333;
+        }
+
+        body.dark .file-list::-webkit-scrollbar-thumb {
+            background: #666;
+        }
+
+        body.dark .file-list::-webkit-scrollbar-thumb:hover {
+            background: #888;
+        }
+
+        .file-item {
+            padding: 10px;
+            margin-bottom: 5px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background 0.2s;
+            position: relative;
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+        }
+
+        .file-item-content {
+            flex: 1;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        body.dark .file-item {
+            background: #333;
+            border: 1px solid #555;
+            color: #e0e0e0;
+        }
+
+        .file-item:hover {
+            background: #f0f0f0;
+        }
+
+        body.dark .file-item:hover {
+            background: #3a3a3a;
+        }
+
+        .file-item.active {
+            background: #d0e8ff;
+            border-color: #4a9eff;
+        }
+
+        body.dark .file-item.active {
+            background: #2a4a6a;
+            border-color: #5a9eff;
+        }
+
+        .file-name {
+            font-size: 10pt;
+            font-weight: normal;
+            margin-bottom: 3px;
+            word-break: break-all;
+            text-align: left;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .file-date {
+            font-size: 9pt;
+            color: #666;
+            text-align: left;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body.dark .file-date {
+            color: #aaa;
+        }
+
+        .file-list-empty {
+            padding: 20px;
+            text-align: left;
+            color: #999;
+            font-size: 10pt;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body.dark .file-list-empty {
+            color: #777;
+        }
+
+        .file-menu-btn {
+            padding: 5px 8px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 14pt;
+            color: #666;
+            border-radius: 3px;
+            margin-left: 5px;
+        }
+
+        body.dark .file-menu-btn {
+            color: #aaa;
+        }
+
+        .file-menu-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark .file-menu-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .file-menu-dropdown {
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 5px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            min-width: 200px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        body.dark .file-menu-dropdown {
+            background: #2a2a2a;
+            border: 1px solid #555;
+        }
+
+        .file-menu-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            font-size: 10pt;
+            text-align: left;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body.dark .file-menu-item {
+            border-bottom: 1px solid #444;
+            color: #e0e0e0;
+        }
+
+        .file-menu-item:hover {
+            background: #f5f5f5;
+        }
+
+        body.dark .file-menu-item:hover {
+            background: #3a3a3a;
+        }
+
+        .file-menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-menu-item-title {
+            font-weight: normal;
+            margin-bottom: 5px;
+            text-align: left;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .file-menu-item-date {
+            font-size: 9pt;
+            color: #666;
+            text-align: left;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body.dark .file-menu-item-date {
+            color: #aaa;
+        }
+
+        /* Custom Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            min-width: 400px;
+            max-width: 500px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body.dark .modal {
+            background: #2a2a2a;
+            color: #e0e0e0;
+        }
+
+        .modal-title {
+            font-size: 14pt;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .modal-message {
+            font-size: 11pt;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11pt;
+            border: 1px solid #999;
+            border-radius: 3px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        body.dark .modal-input {
+            background: #3a3a3a;
+            border: 1px solid #666;
+            color: #e0e0e0;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-button {
+            padding: 8px 16px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11pt;
+            cursor: pointer;
+            border: 1px solid #999;
+            background: white;
+            border-radius: 3px;
+            color: black;
+        }
+
+        body.dark .modal-button {
+            background: #3a3a3a;
+            border: 1px solid #666;
+            color: #e0e0e0;
+        }
+
+        .modal-button:hover {
+            background: #f5f5f5;
+        }
+
+        body.dark .modal-button:hover {
+            background: #4a4a4a;
+        }
+
+        .modal-button.primary {
+            background: #4a9eff;
+            color: white;
+            border-color: #4a9eff;
+        }
+
+        .modal-button.primary:hover {
+            background: #3a8eef;
+        }
+
+        .modal-button.danger {
+            background: #d32f2f;
+            color: white;
+            border-color: #d32f2f;
+        }
+
+        .modal-button.danger:hover {
+            background: #c22e2e;
+        }
+
+        /* Bottom toolbar */
+        .bottom-toolbar {
+            padding: 12px 20px;
+            background: #f0f0f0;
+            border-top: 1px solid #ccc;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        body.dark .bottom-toolbar {
+            background: #2a2a2a;
+            border-top: 1px solid #444;
+        }
+
+        .bottom-toolbar button {
+            padding: 6px 12px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11pt;
+            cursor: pointer;
+            border: 1px solid #999;
+            background: white;
+            border-radius: 3px;
+            color: black;
+        }
+
+        body.dark .bottom-toolbar button {
+            background: #3a3a3a;
+            border: 1px solid #666;
+            color: #e0e0e0;
+        }
+
+        .bottom-toolbar button:hover {
+            background: #f5f5f5;
+        }
+
+        body.dark .bottom-toolbar button:hover {
+            background: #4a4a4a;
+        }
+
+        .bottom-toolbar button:active {
+            background: #e0e0e0;
+        }
+
+        body.dark .bottom-toolbar button:active {
+            background: #2a2a2a;
+        }
+
+        .bottom-toolbar label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11pt;
+            cursor: pointer;
+            color: black;
+        }
+
+        body.dark .bottom-toolbar label {
+            color: #e0e0e0;
+        }
+
+        .bottom-toolbar input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .status {
+            margin-left: auto;
+            font-size: 10pt;
+            color: #666;
+        }
+
+        body.dark .status {
+            color: #aaa;
+        }
+
+        .bottom-toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-left: auto;
+        }
+
+        /* Login Modal Styles */
+        .login-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-overlay.active {
+            display: flex;
+        }
+
+        .login-modal {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body.dark .login-modal {
+            background: #2a2a2a;
+            color: #e0e0e0;
+        }
+
+        .login-header {
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 14pt;
+        }
+
+        .login-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        body.dark .login-tabs {
+            border-bottom: 1px solid #555;
+        }
+
+        .login-tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11pt;
+            color: #666;
+            transition: all 0.2s;
+        }
+
+        body.dark .login-tab {
+            color: #aaa;
+        }
+
+        .login-tab.active {
+            border-bottom-color: #4a9eff;
+            color: #4a9eff;
+            font-weight: normal;
+        }
+
+        .login-form {
+            display: none;
+        }
+
+        .login-form.active {
+            display: block;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11pt;
+            box-sizing: border-box;
+        }
+
+        body.dark .login-input {
+            background: #3a3a3a;
+            border-color: #555;
+            color: #e0e0e0;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 12px;
+            background: #4a9eff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11pt;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .login-button:hover {
+            background: #3a8eef;
+        }
+
+        .login-button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        .login-error {
+            color: #ff4444;
+            font-size: 10pt;
+            margin-top: 10px;
+            text-align: center;
+            display: none;
+        }
+
+        .login-error.active {
+            display: block;
+        }
+
+        .user-info {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 10px;
+            font-size: 10pt;
+        }
+
+        .user-info.active {
+            display: flex;
+        }
+
+        .user-email {
+            color: #666;
+        }
+
+        body.dark .user-email {
+            color: #aaa;
+        }
+
+        .logout-btn {
+            padding: 5px 10px;
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 9pt;
+            cursor: pointer;
+        }
+
+        .logout-btn:hover {
+            background: #cc3333;
+        }
+
+        .login-btn {
+            padding: 0;
+            background: none;
+            color: #666;
+            border: none;
+            border-radius: 0;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 10pt;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-left: auto;
+        }
+
+        body.dark .login-btn {
+            color: #aaa;
+        }
+
+        .login-btn:hover {
+            color: #4a9eff;
+            text-decoration: underline;
+        }
+
+        body.dark .login-btn:hover {
+            color: #5a9eff;
+        }
+
+        .sync-btn {
+            padding: 5px 10px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 9pt;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .sync-btn:hover {
+            background: #218838;
+        }
+
+        .google-signin-btn {
+            width: 100%;
+            padding: 12px;
+            background: white;
+            color: #333;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11pt;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .google-signin-btn:hover {
+            background: #f5f5f5;
+        }
+
+        body.dark .google-signin-btn {
+            background: #3a3a3a;
+            border-color: #555;
+            color: #e0e0e0;
+        }
+
+        body.dark .google-signin-btn:hover {
+            background: #4a4a4a;
+        }
+
+        .google-signin-btn img {
+            width: 20px;
+            height: 20px;
+        }
+
+        .login-divider {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+            color: #999;
+            font-size: 10pt;
+        }
+
+        .login-divider::before,
+        .login-divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background: #ddd;
+        }
+
+        body.dark .login-divider::before,
+        body.dark .login-divider::after {
+            background: #555;
+        }
+
+        .login-divider::before {
+            left: 0;
+        }
+
+        .login-divider::after {
+            right: 0;
+        }
+
+        /* Mobile Responsive Styles */
+        @media screen and (max-width: 768px) {
+            body {
+                font-size: 11pt;
+            }
+
+            .main-container {
+                flex-direction: column;
+            }
+
+            .editor-container {
+                order: 1;
+                min-height: 60vh;
+            }
+
+            #editor {
+                padding: 80px 15px 15px 80px;
+                font-size: 11pt;
+            }
+
+            .sidebar {
+                order: 2;
+                width: 100%;
+                max-height: 40vh;
+                border-left: none;
+                border-top: 1px solid #ccc;
+            }
+
+            body.dark .sidebar {
+                border-top: 1px solid #444;
+            }
+
+            .sidebar-header {
+                padding: 12px;
+                font-size: 10pt;
+            }
+
+            .sidebar-header-title {
+                font-size: 10pt;
+            }
+
+            .sidebar-new-script-btn {
+                width: calc(100% - 20px);
+                padding: 10px;
+                margin: 10px;
+                font-size: 10pt;
+            }
+
+            .file-item {
+                padding: 12px;
+                margin-bottom: 8px;
+            }
+
+            .file-name {
+                font-size: 9pt;
+            }
+
+            .file-date {
+                font-size: 8pt;
+            }
+
+            .bottom-toolbar {
+                order: 3;
+                padding: 10px 15px;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .bottom-toolbar label {
+                font-size: 10pt;
+            }
+
+            .bottom-toolbar button {
+                padding: 8px 12px;
+                font-size: 10pt;
+            }
+
+            .bottom-toolbar-right {
+                width: 100%;
+                margin-left: 0;
+                margin-top: 10px;
+                justify-content: space-between;
+            }
+
+            .status {
+                font-size: 9pt;
+            }
+
+            /* Sidebar toggle arrow - adjust for mobile */
+            .sidebar-toggle-arrow {
+                width: 18px;
+                height: 30px;
+                font-size: 10pt;
+            }
+
+            body.show-sidebar .sidebar-toggle-arrow,
+            body.fullscreen.show-sidebar .sidebar-toggle-arrow {
+                right: 100%;
+            }
+
+            body:not(.show-sidebar) .sidebar-toggle-arrow,
+            body.fullscreen:not(.show-sidebar) .sidebar-toggle-arrow {
+                right: 0;
+            }
+
+            /* Toolbar toggle arrow - adjust for mobile */
+            .toolbar-toggle-arrow {
+                width: 28px;
+                height: 14px;
+                font-size: 9pt;
+            }
+
+            /* Login modal - full width on mobile */
+            .login-modal {
+                width: 95%;
+                max-width: none;
+                padding: 20px;
+            }
+
+            .login-input {
+                padding: 12px;
+                font-size: 11pt;
+            }
+
+            .login-button {
+                padding: 12px;
+                font-size: 11pt;
+            }
+
+            .google-signin-btn {
+                padding: 12px;
+                font-size: 11pt;
+            }
+
+            /* File menu dropdown - adjust for mobile */
+            .file-menu-dropdown {
+                right: 10px;
+                min-width: 180px;
+            }
+
+            /* Modal adjustments */
+            .modal {
+                min-width: 90%;
+                max-width: 90%;
+                padding: 20px;
+            }
+
+            .modal-title {
+                font-size: 13pt;
+            }
+
+            .modal-message {
+                font-size: 10pt;
+            }
+
+            .modal-input {
+                padding: 10px;
+                font-size: 10pt;
+            }
+
+            .modal-button {
+                padding: 10px 14px;
+                font-size: 10pt;
+            }
+
+            /* User info adjustments */
+            .user-info {
+                flex-wrap: wrap;
+                gap: 5px;
+                font-size: 9pt;
+            }
+
+            .sync-btn,
+            .logout-btn {
+                padding: 4px 8px;
+                font-size: 8pt;
+            }
+
+            .login-btn {
+                font-size: 9pt;
+            }
+
+            /* Exit fullscreen button - smaller on mobile */
+            .exit-fullscreen-btn {
+                width: 20px;
+                height: 20px;
+                font-size: 9pt;
+                top: 5px;
+                right: 5px;
+            }
+        }
+
+        /* Very small mobile devices */
+        @media screen and (max-width: 480px) {
+            #editor {
+                padding: 60px 10px 10px 60px;
+                font-size: 10pt;
+            }
+
+            .sidebar-header {
+                padding: 10px;
+                font-size: 9pt;
+            }
+
+            .sidebar-new-script-btn {
+                padding: 8px;
+                font-size: 9pt;
+            }
+
+            .bottom-toolbar {
+                padding: 8px 10px;
+            }
+
+            .bottom-toolbar button {
+                padding: 6px 10px;
+                font-size: 9pt;
+            }
+
+            .file-item {
+                padding: 10px;
+            }
+
+            .file-name {
+                font-size: 8pt;
+            }
+
+            .file-date {
+                font-size: 7pt;
+            }
+
+            .login-modal {
+                padding: 15px;
+            }
+
+            .login-header {
+                font-size: 12pt;
+            }
+
+            .login-tab {
+                padding: 8px 15px;
+                font-size: 10pt;
+            }
+        }
+
+        /* Landscape mobile orientation */
+        @media screen and (max-width: 768px) and (orientation: landscape) {
+            .sidebar {
+                max-height: 50vh;
+            }
+
+            .editor-container {
+                min-height: 50vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="editor-container">
+            <button class="exit-fullscreen-btn" id="exitFullscreenBtn" title="Exit Fullscreen">✕</button>
+            <textarea id="editor"></textarea>
+        </div>
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-header-title">My Scripts</span>
+                <div class="user-info" id="userInfo">
+                    <span class="user-email" id="userEmail"></span>
+                    <button class="sync-btn" id="syncBtn" title="Sync with cloud">Sync</button>
+                    <button class="logout-btn" id="logoutBtn">Logout</button>
+                </div>
+                <button class="login-btn" id="loginBtn">Login</button>
+            </div>
+            <button class="sidebar-new-script-btn" id="sidebarNewScriptBtn">New Script</button>
+            <div class="file-list" id="fileList">
+                <div class="file-list-empty">Loading files...</div>
+            </div>
+        </div>
+    </div>
+    <!-- Arrow buttons outside containers so they're always visible -->
+    <button class="sidebar-toggle-arrow" id="sidebarToggleArrow">◀</button>
+    <button class="toolbar-toggle-arrow" id="toolbarToggleArrow">▼</button>
+    <div class="bottom-toolbar">
+        <label>
+            <input type="checkbox" id="darkModeCheck">
+            Dark Mode
+        </label>
+        <label>
+            <input type="checkbox" id="fullscreenCheck">
+            Fullscreen
+        </label>
+        <button id="templateBtn">Generate Scene Template</button>
+        <button id="shotlistTemplateBtn">Generate Scene Shotlist Template</button>
+        <div class="bottom-toolbar-right">
+            <button id="sidebarSaveBtn">Save File</button>
+            <span class="status" id="status">Ready</span>
+        </div>
+    </div>
+
+    <script>
+        // Random placeholder messages
+        const placeholderMessages = [
+            "take a deep breath and start writing...",
+            "staring at a blank page is not a crime...",
+            "start writing something, but no rush, take your time...",
+            "this script is not gonna write itself...",
+            "c'mon lets make this movie already..."
+        ];
+
+        function getRandomPlaceholder() {
+            return placeholderMessages[Math.floor(Math.random() * placeholderMessages.length)];
+        }
+
+        function updateEditorPlaceholder() {
+            editor.placeholder = getRandomPlaceholder();
+        }
+
+        const editor = document.getElementById('editor');
+        const darkModeCheck = document.getElementById('darkModeCheck');
+        const fullscreenCheck = document.getElementById('fullscreenCheck');
+        const exitFullscreenBtn = document.getElementById('exitFullscreenBtn');
+        const sidebarToggleArrow = document.getElementById('sidebarToggleArrow');
+        const toolbarToggleArrow = document.getElementById('toolbarToggleArrow');
+        const sidebarSaveBtn = document.getElementById('sidebarSaveBtn');
+        const sidebarNewScriptBtn = document.getElementById('sidebarNewScriptBtn');
+        const templateBtn = document.getElementById('templateBtn');
+        const shotlistTemplateBtn = document.getElementById('shotlistTemplateBtn');
+        const fileList = document.getElementById('fileList');
+        const status = document.getElementById('status');
+
+        let currentFile = null;
+
+        // File storage in localStorage - improved structure
+        function getStoredFiles() {
+            const stored = localStorage.getItem('scriptFiles');
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        function saveFilesToStorage(files) {
+            localStorage.setItem('scriptFiles', JSON.stringify(files));
+        }
+
+        // Get all main files (not versions)
+        function getMainFiles() {
+            const files = getStoredFiles();
+            return files.filter(f => !f.isVersion).sort((a, b) => b.time - a.time);
+        }
+
+        // Get next available script number
+        function getNextScriptNumber() {
+            const files = getMainFiles();
+            const pattern = /^my\.script\.(\d+)_/;
+            let maxNumber = 0;
+            
+            files.forEach(file => {
+                const match = file.name.match(pattern);
+                if (match) {
+                    const num = parseInt(match[1]);
+                    if (num > maxNumber) {
+                        maxNumber = num;
+                    }
+                }
+            });
+            
+            return maxNumber + 1;
+        }
+
+        // Generate default filename
+        function generateDefaultFilename() {
+            const number = getNextScriptNumber();
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `my.script.${number}_${year}-${month}-${day}`;
+        }
+
+        // Custom modal functions
+        function showModal(title, message, inputValue = '', onConfirm, onCancel = null, isInput = false, isDanger = false) {
+            const container = document.getElementById('modalContainer');
+            container.innerHTML = '';
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            
+            let inputHtml = '';
+            if (isInput) {
+                inputHtml = `<input type="text" class="modal-input" id="modalInput" value="${inputValue}" autofocus>`;
+            }
+            
+            modal.innerHTML = `
+                <div class="modal-title">${title}</div>
+                <div class="modal-message">${message}</div>
+                ${inputHtml}
+                <div class="modal-buttons">
+                    <button class="modal-button ${isDanger ? 'danger' : ''}" id="modalCancel">Cancel</button>
+                    <button class="modal-button primary" id="modalConfirm">${isDanger ? 'Delete' : 'Confirm'}</button>
+                </div>
+            `;
+            
+            overlay.appendChild(modal);
+            container.appendChild(overlay);
+            
+            const confirmBtn = modal.querySelector('#modalConfirm');
+            const cancelBtn = modal.querySelector('#modalCancel');
+            const input = modal.querySelector('#modalInput');
+            
+            const closeModal = () => {
+                container.innerHTML = '';
+            };
+            
+            confirmBtn.addEventListener('click', () => {
+                if (isInput && input) {
+                    const value = input.value.trim();
+                    if (value) {
+                        onConfirm(value);
+                        closeModal();
+                    }
+                } else {
+                    onConfirm();
+                    closeModal();
+                }
+            });
+            
+            cancelBtn.addEventListener('click', () => {
+                if (onCancel) {
+                    onCancel();
+                }
+                closeModal();
+            });
+            
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    if (onCancel) {
+                        onCancel();
+                    }
+                    closeModal();
+                }
+            });
+            
+            if (input) {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        confirmBtn.click();
+                    } else if (e.key === 'Escape') {
+                        cancelBtn.click();
+                    }
+                });
+            } else {
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        cancelBtn.click();
+                    }
+                });
+            }
+        }
+
+        // Get a specific file by ID
+        function getFileById(fileId) {
+            const files = getStoredFiles();
+            return files.find(f => f.id === fileId && !f.isVersion);
+        }
+
+        // Get all versions for a file
+        function getFileVersions(fileId) {
+            const files = getStoredFiles();
+            return files.filter(f => f.parentId === fileId && f.isVersion).sort((a, b) => b.time - a.time);
+        }
+
+        // Get a version by its versionId
+        function getVersionById(versionId) {
+            const files = getStoredFiles();
+            return files.find(f => f.versionId === versionId && f.isVersion);
+        }
+
+        // Delete a file and all its versions
+        window.deleteFile = function deleteFile(fileId) {
+            const files = getStoredFiles();
+            
+            // Remove the main file
+            const fileIndex = files.findIndex(f => f.id === fileId && !f.isVersion);
+            if (fileIndex !== -1) {
+                files.splice(fileIndex, 1);
+            }
+            
+            // Remove all versions of this file
+            const versions = files.filter(f => f.parentId === fileId && f.isVersion);
+            versions.forEach(version => {
+                const vIndex = files.findIndex(f => f.versionId === version.versionId);
+                if (vIndex !== -1) {
+                    files.splice(vIndex, 1);
+                }
+            });
+            
+            saveFilesToStorage(files);
+            
+            // Delete from cloud if logged in
+            if (authToken) {
+                deleteFileFromCloud(fileId);
+            }
+            
+            // If the deleted file was currently open, clear the editor
+            if (currentFile === fileId) {
+                editor.value = '';
+                currentFile = null;
+            }
+            
+            loadFileList();
+        }
+
+        // Add or update a file
+        function addFileToStorage(name, content) {
+            const files = getStoredFiles();
+            const baseName = name.endsWith('.txt') ? name.replace('.txt', '') : name;
+            const fileName = baseName + '.txt';
+            
+            // Check if file with same name exists
+            const existingFile = files.find(f => f.name === fileName && !f.isVersion);
+            
+            if (existingFile) {
+                // File exists - save current content as version before updating
+                const oldContent = existingFile.content;
+                if (oldContent !== content) {
+                    // Create version entry with old content
+                    const version = {
+                        id: existingFile.id,
+                        versionId: Date.now().toString(),
+                        name: fileName,
+                        content: oldContent,
+                        date: existingFile.date,
+                        time: existingFile.time,
+                        isVersion: true,
+                        parentId: existingFile.id
+                    };
+                    files.push(version);
+                }
+                
+                // Update the main file
+                existingFile.content = content;
+                existingFile.date = new Date().toLocaleString();
+                existingFile.time = Date.now();
+                
+                saveFilesToStorage(files);
+                // Sync to cloud if logged in
+                if (authToken) {
+                    saveFileToCloud(existingFile);
+                }
+                return existingFile;
+            } else {
+                // New file
+                const newFile = {
+                    id: Date.now().toString(),
+                    versionId: null,
+                    name: fileName,
+                    content: content,
+                    date: new Date().toLocaleString(),
+                    time: Date.now(),
+                    isVersion: false,
+                    parentId: null
+                };
+                
+                files.push(newFile);
+                
+                // Keep only last 50 main files (versions are kept separately)
+                const mainFiles = files.filter(f => !f.isVersion);
+                if (mainFiles.length > 50) {
+                    const toRemove = mainFiles.slice(50);
+                    toRemove.forEach(file => {
+                        // Remove file and all its versions
+                        const fileIndex = files.findIndex(f => f.id === file.id);
+                        if (fileIndex !== -1) files.splice(fileIndex, 1);
+                        const versions = files.filter(f => f.parentId === file.id);
+                        versions.forEach(v => {
+                            const vIndex = files.findIndex(f => f.versionId === v.versionId);
+                            if (vIndex !== -1) files.splice(vIndex, 1);
+                        });
+                    });
+                }
+                
+                saveFilesToStorage(files);
+                // Sync to cloud if logged in
+                if (authToken) {
+                    saveFileToCloud(newFile);
+                }
+                return newFile;
+            }
+        }
+
+        // Save current version (creates a version entry)
+        function saveCurrentVersionToFile(fileId, newContent) {
+            const files = getStoredFiles();
+            const fileIndex = files.findIndex(f => f.id === fileId && !f.isVersion);
+            
+            if (fileIndex === -1) {
+                return null;
+            }
+            
+            const file = files[fileIndex];
+            
+            // Only create version if content changed
+            if (file.content !== newContent) {
+                // Save current content as version
+                const version = {
+                    id: fileId,
+                    versionId: Date.now().toString(),
+                    name: file.name,
+                    content: file.content,
+                    date: file.date,
+                    time: file.time,
+                    isVersion: true,
+                    parentId: fileId
+                };
+                files.push(version);
+                
+                // Keep only last 20 versions per file
+                const versions = files.filter(f => f.parentId === fileId && f.isVersion);
+                if (versions.length > 20) {
+                    versions.sort((a, b) => b.time - a.time);
+                    const toRemove = versions.slice(20);
+                    toRemove.forEach(v => {
+                        const vIndex = files.findIndex(f => f.versionId === v.versionId);
+                        if (vIndex !== -1) files.splice(vIndex, 1);
+                    });
+                }
+            }
+            
+            // Update the main file
+            file.content = newContent;
+            file.date = new Date().toLocaleString();
+            file.time = Date.now();
+            
+            saveFilesToStorage(files);
+            return file;
+        }
+
+        // Scene template function
+        function generateSceneTemplate(sceneNumber) {
+            return `${sceneNumber}. INT./EXT. [location] – [time]
+
+[Description of the setting.]
+
+[Introduction of character(s) and their placement or activity.]
+
+[Notable action or change in the environment.]
+
+            [Character Name]
+
+        [Dialogue line.]
+
+            [Character Name]
+
+        [Dialogue line.]
+
+[Action or exchange that advances the scene.]
+
+[Key line or action marking a shift or development.]
+
+[Final action, line, or detail concluding the scene.]
+
+CUT TO:
+
+`;
+        }
+
+        // Scene shotlist template function
+        function generateShotlistTemplate(sceneNumber) {
+            return `SCENE ${sceneNumber} – [location] – [time]
+
+
+SHOT 1 – [shot size] – [camera position]
+
+[Describe subject(s) in frame and the action.]
+
+SHOT 2 – [shot size] – [camera movement or angle]
+
+[Describe what the camera captures or follows.]
+
+SHOT 3 – [shot size]
+
+[Describe character or object focus.]
+
+SHOT 4 – [shot size / lens]
+
+[Describe action, movement, or transition.]
+
+SHOT 5 – [detail / insert / cutaway]
+
+[Describe the specific element being captured.]
+
+SHOT 6 – [wide / master]
+
+[Describe the broader spatial or continuity shot.]
+
+SHOT 7 – [optional specialty shot]
+
+[Steadicam / handheld / drone / dolly / static, etc.]
+
+
+END OF SCENE ${sceneNumber}
+
+
+
+
+`;
+        }
+
+        // Find the last scene number in the editor
+        function findLastSceneNumber() {
+            const content = editor.value;
+            // Match patterns like "1. INT./EXT." or "2. INT./EXT." or "SCENE 1" or "SCENE 2" etc.
+            const sceneMatches = content.match(/(\d+)\.\s*INT\.\/EXT\.|SCENE\s+(\d+)/g);
+            if (!sceneMatches || sceneMatches.length === 0) {
+                return 0;
+            }
+            // Extract numbers and find the highest
+            const numbers = sceneMatches.map(match => {
+                const numMatch = match.match(/(\d+)/);
+                return numMatch ? parseInt(numMatch[1]) : 0;
+            });
+            return Math.max(...numbers);
+        }
+
+        // Load last saved content on startup
+        function loadLastAutosave() {
+            const savedContent = localStorage.getItem('scriptContent');
+            if (savedContent) {
+                editor.value = savedContent;
+            }
+            const savedBg = localStorage.getItem('scriptBackground');
+            if (savedBg === 'dark') {
+                document.body.classList.add('dark');
+                editor.classList.add('dark');
+                darkModeCheck.checked = true;
+            }
+            loadFileList();
+        }
+
+        // Load file list
+        function loadFileList() {
+            const mainFiles = getMainFiles();
+            if (mainFiles.length > 0) {
+                fileList.innerHTML = '';
+                mainFiles.forEach(file => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    if (currentFile === file.id) {
+                        fileItem.classList.add('active');
+                    }
+                    const displayName = file.name.replace('.txt', '');
+                    
+                    const fileContent = document.createElement('div');
+                    fileContent.className = 'file-item-content';
+                    fileContent.innerHTML = `
+                        <div class="file-name">${displayName}</div>
+                        <div class="file-date">${file.date}</div>
+                    `;
+                    fileContent.addEventListener('click', () => loadFile(file.id, fileItem));
+                    
+                    const menuBtn = document.createElement('button');
+                    menuBtn.className = 'file-menu-btn';
+                    menuBtn.innerHTML = '⋯';
+                    menuBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        toggleFileMenu(file.id, menuBtn, fileItem);
+                    });
+                    
+                    fileItem.appendChild(fileContent);
+                    fileItem.appendChild(menuBtn);
+                    fileList.appendChild(fileItem);
+                });
+            } else {
+                fileList.innerHTML = '<div class="file-list-empty">No previous files</div>';
+            }
+        }
+
+        function toggleFileMenu(fileId, menuBtn, fileItem) {
+            // Close any open menus
+            document.querySelectorAll('.file-menu-dropdown').forEach(menu => menu.remove());
+            
+            // Check if menu is already open
+            const existingMenu = fileItem.querySelector('.file-menu-dropdown');
+            if (existingMenu) {
+                existingMenu.remove();
+                return;
+            }
+            
+            const file = getFileById(fileId);
+            const versions = getFileVersions(fileId);
+            const menu = document.createElement('div');
+            menu.className = 'file-menu-dropdown';
+            
+            // Add current file options
+            if (file) {
+                const currentItem = document.createElement('div');
+                currentItem.className = 'file-menu-item';
+                currentItem.innerHTML = `
+                    <div class="file-menu-item-title">Current Version</div>
+                    <div class="file-menu-item-date">Click to load | Right-click to export</div>
+                `;
+                currentItem.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    loadFile(fileId, fileItem);
+                    menu.remove();
+                });
+                currentItem.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    exportVersion(file);
+                    menu.remove();
+                });
+                menu.appendChild(currentItem);
+                
+                // Add separator if there are versions
+                if (versions.length > 0) {
+                    const separator = document.createElement('div');
+                    separator.style.padding = '5px';
+                    separator.style.borderTop = '1px solid #ccc';
+                    if (document.body.classList.contains('dark')) {
+                        separator.style.borderTopColor = '#444';
+                    }
+                    menu.appendChild(separator);
+                }
+            }
+            
+            // Add version history
+            if (versions.length === 0) {
+                if (!file) {
+                    menu.innerHTML = '<div class="file-menu-item">No previous versions</div>';
+                }
+            } else {
+                versions.forEach(version => {
+                    const menuItem = document.createElement('div');
+                    menuItem.className = 'file-menu-item';
+                    menuItem.innerHTML = `
+                        <div class="file-menu-item-title">Version from ${version.date}</div>
+                        <div class="file-menu-item-date">Click to load | Right-click to export</div>
+                    `;
+                    menuItem.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        loadFile(fileId, fileItem, version.versionId);
+                        menu.remove();
+                    });
+                    menuItem.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        exportVersion(version);
+                        menu.remove();
+                    });
+                    menu.appendChild(menuItem);
+                });
+            }
+            
+            // Add delete option
+            if (file) {
+                const separator = document.createElement('div');
+                separator.style.padding = '5px';
+                separator.style.borderTop = '1px solid #ccc';
+                if (document.body.classList.contains('dark')) {
+                    separator.style.borderTopColor = '#444';
+                }
+                menu.appendChild(separator);
+                
+                const deleteItem = document.createElement('div');
+                deleteItem.className = 'file-menu-item';
+                deleteItem.style.color = '#d32f2f';
+                deleteItem.innerHTML = `
+                    <div class="file-menu-item-title">Delete Script</div>
+                    <div class="file-menu-item-date">Permanently delete this script</div>
+                `;
+                deleteItem.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const fileName = file.name.replace('.txt', '');
+                    menu.remove();
+                    showModal(
+                        'Delete Script',
+                        `Are you sure you want to delete "${fileName}"?\n\nThis will permanently delete the script and all its versions.`,
+                        '',
+                        () => {
+                            deleteFile(fileId);
+                            showStatus('Script deleted', 2000);
+                        },
+                        null,
+                        false,
+                        true
+                    );
+                });
+                menu.appendChild(deleteItem);
+            }
+            
+            fileItem.appendChild(menu);
+            
+            // Close menu when clicking outside
+            setTimeout(() => {
+                const closeMenu = (e) => {
+                    if (!fileItem.contains(e.target)) {
+                        menu.remove();
+                        document.removeEventListener('click', closeMenu);
+                    }
+                };
+                document.addEventListener('click', closeMenu);
+            }, 0);
+        }
+
+        function exportVersion(version) {
+            const blob = new Blob([version.content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const versionName = version.name.replace('.txt', '');
+            a.download = `${versionName}_${version.date.replace(/[\/:]/g, '-')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showStatus('Version exported!', 2000);
+        }
+
+        // Load a specific file or version
+        function loadFile(fileId, fileItem, versionId = null) {
+            let file;
+            if (versionId) {
+                // Loading a version
+                file = getVersionById(versionId);
+                if (file) {
+                    editor.value = file.content;
+                    // Don't set currentFile when loading a version - user is just viewing it
+                    showStatus('Version loaded (read-only)', 2000);
+                } else {
+                    showStatus('Version not found', 2000);
+                }
+            } else {
+                // Loading main file
+                file = getFileById(fileId);
+                if (file) {
+                    editor.value = file.content;
+                    currentFile = fileId;
+                    
+                    // Update active state
+                    document.querySelectorAll('.file-item').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    if (fileItem) {
+                        fileItem.classList.add('active');
+                    }
+                    
+                    showStatus('File loaded', 2000);
+                } else {
+                    showStatus('File not found', 2000);
+                }
+            }
+        }
+
+        // Initialize
+        loadLastAutosave();
+
+        // Save current version to the currently open file
+        function saveCurrentVersion() {
+            const content = editor.value;
+            if (!content.trim()) {
+                showStatus('Nothing to save', 2000);
+                return;
+            }
+
+            if (currentFile) {
+                // Update existing file and create a version
+                const updatedFile = saveCurrentVersionToFile(currentFile, content);
+                if (updatedFile) {
+                    showStatus('File updated!', 2000);
+                    loadFileList();
+                } else {
+                    showStatus('File not found', 2000);
+                }
+            } else {
+                // No file open, create a new one
+                const defaultName = generateDefaultFilename();
+                showModal(
+                    'Save File',
+                    'Enter filename:',
+                    defaultName,
+                    (filename) => {
+                        const newFile = addFileToStorage(filename, content);
+                        currentFile = newFile.id;
+                        showStatus('File saved!', 2000);
+                        loadFileList();
+                        
+                        // Update active state
+                        setTimeout(() => {
+                            const fileItems = document.querySelectorAll('.file-item');
+                            fileItems.forEach((item, index) => {
+                                if (index === 0) { // New file is first in list
+                                    item.classList.add('active');
+                                }
+                            });
+                        }, 100);
+                    },
+                    null,
+                    true
+                );
+            }
+        }
+
+        // Show status message
+        function showStatus(message, duration = 2000) {
+            status.textContent = message;
+            setTimeout(() => {
+                status.textContent = 'Ready';
+            }, duration);
+        }
+
+        // Dark mode toggle
+        darkModeCheck.addEventListener('change', () => {
+            const isDark = darkModeCheck.checked;
+            document.body.classList.toggle('dark', isDark);
+            editor.classList.toggle('dark', isDark);
+            const backgroundMode = isDark ? 'dark' : 'light';
+            
+            localStorage.setItem('scriptBackground', backgroundMode);
+            showStatus(isDark ? 'Dark mode on' : 'Dark mode off', 1000);
+        });
+
+        // Fullscreen API helpers (cross-browser compatibility)
+        function enterFullscreen() {
+            const element = document.documentElement;
+            if (element.requestFullscreen) {
+                element.requestFullscreen();
+            } else if (element.webkitRequestFullscreen) {
+                element.webkitRequestFullscreen();
+            } else if (element.mozRequestFullScreen) {
+                element.mozRequestFullScreen();
+            } else if (element.msRequestFullscreen) {
+                element.msRequestFullscreen();
+            }
+        }
+
+        function exitFullscreen() {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
+
+        function isFullscreen() {
+            return !!(document.fullscreenElement || 
+                     document.webkitFullscreenElement || 
+                     document.mozFullScreenElement || 
+                     document.msFullscreenElement);
+        }
+
+        // Sync checkbox with fullscreen state
+        function syncFullscreenState() {
+            const isFs = isFullscreen();
+            fullscreenCheck.checked = isFs;
+            document.body.classList.toggle('fullscreen', isFs);
+            localStorage.setItem('fullscreenMode', isFs ? 'on' : 'off');
+            
+            if (isFs) {
+                // When entering fullscreen, close both panels by default
+                document.body.classList.remove('show-sidebar', 'show-toolbar');
+                sidebarToggleArrow.textContent = '◀';
+                toolbarToggleArrow.textContent = '▲';
+            } else {
+                // When exiting fullscreen, update arrow directions based on current visibility
+                sidebarToggleArrow.textContent = document.body.classList.contains('show-sidebar') ? '▶' : '◀';
+                toolbarToggleArrow.textContent = document.body.classList.contains('show-toolbar') ? '▼' : '▲';
+            }
+        }
+
+        // Listen for fullscreen changes (user might exit via ESC key)
+        document.addEventListener('fullscreenchange', syncFullscreenState);
+        document.addEventListener('webkitfullscreenchange', syncFullscreenState);
+        document.addEventListener('mozfullscreenchange', syncFullscreenState);
+        document.addEventListener('MSFullscreenChange', syncFullscreenState);
+
+        // Fullscreen toggle
+        fullscreenCheck.addEventListener('change', () => {
+            if (fullscreenCheck.checked) {
+                enterFullscreen();
+                showStatus('Fullscreen mode on', 1000);
+            } else {
+                exitFullscreen();
+                showStatus('Fullscreen mode off', 1000);
+            }
+        });
+
+        // Exit fullscreen button
+        exitFullscreenBtn.addEventListener('click', () => {
+            exitFullscreen();
+            showStatus('Fullscreen mode off', 1000);
+        });
+
+        // Toggle sidebar (works in both normal and fullscreen mode)
+        sidebarToggleArrow.addEventListener('click', () => {
+            document.body.classList.toggle('show-sidebar');
+            // When sidebar is shown, arrow points right (▶) to close, when hidden, arrow points left (◀) to open
+            sidebarToggleArrow.textContent = document.body.classList.contains('show-sidebar') ? '▶' : '◀';
+            showStatus(document.body.classList.contains('show-sidebar') ? 'My Scripts shown' : 'My Scripts hidden', 1000);
+        });
+
+        // Toggle toolbar (works in both normal and fullscreen mode)
+        toolbarToggleArrow.addEventListener('click', () => {
+            document.body.classList.toggle('show-toolbar');
+            // When toolbar is shown, arrow points down (▼), when hidden, arrow points up (▲)
+            toolbarToggleArrow.textContent = document.body.classList.contains('show-toolbar') ? '▼' : '▲';
+            showStatus(document.body.classList.contains('show-toolbar') ? 'Toolbar shown' : 'Toolbar hidden', 1000);
+        });
+
+        // Load fullscreen preference on startup (but don't auto-enter fullscreen for security)
+        // User needs to explicitly enable it
+
+
+        // Save File button - handles both saving current version and creating new files
+        sidebarSaveBtn.addEventListener('click', saveCurrentVersion);
+
+        // New script button in sidebar
+        sidebarNewScriptBtn.addEventListener('click', () => {
+            if (editor.value.trim()) {
+                showModal(
+                    'New Script',
+                    'Create a new script? Current content will be lost.',
+                    '',
+                    () => {
+                        editor.value = '';
+                        currentFile = null;
+                        updateEditorPlaceholder();
+                        document.querySelectorAll('.file-item').forEach(item => {
+                            item.classList.remove('active');
+                        });
+                        showStatus('New script created', 2000);
+                        editor.focus();
+                    }
+                );
+            } else {
+                editor.value = '';
+                currentFile = null;
+                updateEditorPlaceholder();
+                document.querySelectorAll('.file-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                showStatus('New script created', 2000);
+                editor.focus();
+            }
+        });
+
+
+        // Generate scene template (starts at 1 or next available)
+        templateBtn.addEventListener('click', () => {
+            const lastScene = findLastSceneNumber();
+            const nextScene = lastScene === 0 ? 1 : lastScene + 1;
+            const template = generateSceneTemplate(nextScene);
+            editor.value += template;
+            showStatus(`Scene ${nextScene} template added`, 2000);
+            editor.focus();
+            // Scroll to bottom
+            editor.scrollTop = editor.scrollHeight;
+        });
+
+        // Generate scene shotlist template (starts at 1 or next available)
+        shotlistTemplateBtn.addEventListener('click', () => {
+            const lastScene = findLastSceneNumber();
+            const nextScene = lastScene === 0 ? 1 : lastScene + 1;
+            const template = generateShotlistTemplate(nextScene);
+            editor.value += template;
+            showStatus(`Scene ${nextScene} shotlist template added`, 2000);
+            editor.focus();
+            // Scroll to bottom
+            editor.scrollTop = editor.scrollHeight;
+        });
+
+
+        // Keyboard shortcuts
+        editor.addEventListener('keydown', (e) => {
+            // Cmd+S to save file
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                sidebarSaveBtn.click();
+            }
+            // Cmd+B to toggle dark mode
+            if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+                e.preventDefault();
+                darkModeCheck.checked = !darkModeCheck.checked;
+                darkModeCheck.dispatchEvent(new Event('change'));
+            }
+            // Cmd+N for new script
+            if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+                e.preventDefault();
+                sidebarNewScriptBtn.click();
+            }
+        });
+
+        // Initialize sidebar and toolbar as visible by default (in normal mode)
+        document.body.classList.add('show-sidebar', 'show-toolbar');
+        sidebarToggleArrow.textContent = '▶';
+        toolbarToggleArrow.textContent = '▼';
+
+        // Set initial random placeholder
+        updateEditorPlaceholder();
+
+        // Focus editor on load
+        editor.focus();
+
+        // ========== AUTHENTICATION & API ==========
+        const API_URL = 'http://localhost:3000/api';
+        let authToken = localStorage.getItem('authToken');
+        let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+
+        // Login/Register UI elements
+        const loginOverlay = document.getElementById('loginOverlay');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userInfo = document.getElementById('userInfo');
+        const userEmail = document.getElementById('userEmail');
+        const syncBtn = document.getElementById('syncBtn');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const loginTabs = document.querySelectorAll('.login-tab');
+        const loginError = document.getElementById('loginError');
+        const registerError = document.getElementById('registerError');
+
+        // API helper function
+        async function apiCall(endpoint, options = {}) {
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}${endpoint}`, {
+                    ...options,
+                    headers
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Request failed');
+                }
+
+                return data;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // Update UI based on auth state
+        function updateAuthUI() {
+            if (currentUser && authToken) {
+                loginBtn.style.display = 'none';
+                userInfo.classList.add('active');
+                userEmail.textContent = currentUser.email;
+            } else {
+                loginBtn.style.display = 'block';
+                userInfo.classList.remove('active');
+            }
+        }
+
+        // Login
+        async function login(email, password) {
+            try {
+                const data = await apiCall('/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                });
+
+                authToken = data.token;
+                currentUser = data.user;
+                localStorage.setItem('authToken', authToken);
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+                updateAuthUI();
+                loginOverlay.classList.remove('active');
+                showStatus('Logged in successfully', 2000);
+                
+                // Auto-sync after login
+                syncWithCloud();
+            } catch (error) {
+                loginError.textContent = error.message;
+                loginError.classList.add('active');
+            }
+        }
+
+        // Register
+        async function register(email, password) {
+            try {
+                const data = await apiCall('/register', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                });
+
+                authToken = data.token;
+                currentUser = data.user;
+                localStorage.setItem('authToken', authToken);
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+                updateAuthUI();
+                loginOverlay.classList.remove('active');
+                showStatus('Account created successfully', 2000);
+                
+                // Auto-sync after registration
+                syncWithCloud();
+            } catch (error) {
+                registerError.textContent = error.message;
+                registerError.classList.add('active');
+            }
+        }
+
+        // Logout
+        function logout() {
+            authToken = null;
+            currentUser = null;
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            updateAuthUI();
+            showStatus('Logged out', 2000);
+        }
+
+        // Sync local files to cloud
+        async function syncWithCloud() {
+            if (!authToken) {
+                showStatus('Please login to sync', 2000);
+                return;
+            }
+
+            try {
+                showStatus('Syncing...', 0);
+                const localFiles = getStoredFiles();
+                
+                const result = await apiCall('/scripts/sync', {
+                    method: 'POST',
+                    body: JSON.stringify({ scripts: localFiles })
+                });
+
+                // Also download cloud files
+                await loadCloudFiles();
+                
+                showStatus(`Synced ${result.synced} files`, 2000);
+            } catch (error) {
+                showStatus('Sync failed: ' + error.message, 3000);
+            }
+        }
+
+        // Load files from cloud
+        async function loadCloudFiles() {
+            if (!authToken) return;
+
+            try {
+                const cloudFiles = await apiCall('/scripts');
+                
+                // Merge with local files (cloud takes precedence)
+                const localFiles = getStoredFiles();
+                const mergedFiles = [...localFiles];
+                
+                cloudFiles.forEach(cloudFile => {
+                    const localIndex = mergedFiles.findIndex(f => f.id === cloudFile.id);
+                    if (localIndex >= 0) {
+                        mergedFiles[localIndex] = cloudFile;
+                    } else {
+                        mergedFiles.push(cloudFile);
+                    }
+                });
+
+                saveFilesToStorage(mergedFiles);
+                loadFileList();
+            } catch (error) {
+                console.error('Failed to load cloud files:', error);
+            }
+        }
+
+        // Save file to cloud
+        async function saveFileToCloud(file) {
+            if (!authToken) return;
+
+            try {
+                await apiCall('/scripts', {
+                    method: 'POST',
+                    body: JSON.stringify(file)
+                });
+            } catch (error) {
+                console.error('Failed to save to cloud:', error);
+            }
+        }
+
+        // Delete file from cloud
+        async function deleteFileFromCloud(fileId) {
+            if (!authToken) return;
+
+            try {
+                await apiCall(`/scripts/${fileId}`, {
+                    method: 'DELETE'
+                });
+            } catch (error) {
+                console.error('Failed to delete from cloud:', error);
+            }
+        }
+
+        // Event listeners
+        loginBtn.addEventListener('click', () => {
+            loginOverlay.classList.add('active');
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            logout();
+        });
+
+        syncBtn.addEventListener('click', () => {
+            syncWithCloud();
+        });
+
+        loginOverlay.addEventListener('click', (e) => {
+            if (e.target === loginOverlay) {
+                loginOverlay.classList.remove('active');
+            }
+        });
+
+        loginTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                loginTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                loginForm.classList.toggle('active', tabName === 'login');
+                registerForm.classList.toggle('active', tabName === 'register');
+                
+                loginError.classList.remove('active');
+                registerError.classList.remove('active');
+            });
+        });
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            loginError.classList.remove('active');
+            await login(email, password);
+        });
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            registerError.classList.remove('active');
+            await register(email, password);
+        });
+
+        // Google Sign-In
+        async function signInWithGoogle() {
+            try {
+                // Check if Google OAuth is available
+                const healthCheck = await fetch(`${API_URL}/health`);
+                const health = await healthCheck.json();
+                
+                if (!health.googleOAuth) {
+                    showStatus('Google Sign-In not configured on server', 3000);
+                    return;
+                }
+
+                // Get Google OAuth URL
+                const response = await apiCall('/auth/google');
+                if (response.authUrl) {
+                    // Open popup window for OAuth
+                    const width = 500;
+                    const height = 600;
+                    const left = (screen.width - width) / 2;
+                    const top = (screen.height - height) / 2;
+                    
+                    const popup = window.open(
+                        response.authUrl,
+                        'Google Sign-In',
+                        `width=${width},height=${height},left=${left},top=${top}`
+                    );
+
+                    // Listen for OAuth callback via message
+                    const messageListener = (event) => {
+                        if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+                            authToken = event.data.token;
+                            currentUser = event.data.user;
+                            localStorage.setItem('authToken', authToken);
+                            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                            
+                            updateAuthUI();
+                            popup.close();
+                            loginOverlay.classList.remove('active');
+                            showStatus('Signed in with Google', 2000);
+                            
+                            window.removeEventListener('message', messageListener);
+                            syncWithCloud();
+                        }
+                    };
+                    
+                    window.addEventListener('message', messageListener);
+
+                    // Fallback: check URL params if redirected in same window
+                    const checkCallback = setInterval(() => {
+                        if (popup.closed) {
+                            clearInterval(checkCallback);
+                            window.removeEventListener('message', messageListener);
+                        }
+                    }, 500);
+                }
+            } catch (error) {
+                loginError.textContent = 'Google Sign-In failed: ' + error.message;
+                loginError.classList.add('active');
+            }
+        }
+
+        // Google Sign-In button handlers
+        const googleSignInBtn = document.getElementById('googleSignInBtn');
+        const googleSignUpBtn = document.getElementById('googleSignUpBtn');
+        
+        if (googleSignInBtn) {
+            googleSignInBtn.addEventListener('click', signInWithGoogle);
+        }
+        
+        if (googleSignUpBtn) {
+            googleSignUpBtn.addEventListener('click', signInWithGoogle);
+        }
+
+        // Handle OAuth callback from URL (if redirected in same window)
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const email = urlParams.get('email');
+            const error = urlParams.get('error');
+
+            if (error) {
+                showStatus('Authentication error: ' + error, 3000);
+                // Clean URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } else if (token && email) {
+                authToken = token;
+                currentUser = { email: decodeURIComponent(email) };
+                localStorage.setItem('authToken', authToken);
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                updateAuthUI();
+                showStatus('Signed in with Google', 2000);
+                
+                // Clean URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+                
+                // Auto-sync after login
+                syncWithCloud();
+            }
+        });
+
+        // Initialize auth UI
+        updateAuthUI();
+
+        // Auto-load cloud files on startup if logged in
+        if (authToken) {
+            loadCloudFiles();
+        }
+
+    </script>
+    <!-- Custom Modal Container -->
+    <div id="modalContainer"></div>
+
+    <!-- Login Modal -->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-modal">
+            <div class="login-header">Script Writer</div>
+            <div class="login-tabs">
+                <button class="login-tab active" data-tab="login">Login</button>
+                <button class="login-tab" data-tab="register">Register</button>
+            </div>
+            
+            <form class="login-form active" id="loginForm">
+                <input type="email" class="login-input" id="loginEmail" placeholder="Email" required>
+                <input type="password" class="login-input" id="loginPassword" placeholder="Password" required>
+                <button type="submit" class="login-button" id="loginSubmitBtn">Login</button>
+                <div class="login-error" id="loginError"></div>
+                <div class="login-divider">or</div>
+                <button type="button" class="google-signin-btn" id="googleSignInBtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Sign in with Google
+                </button>
+            </form>
+            
+            <form class="login-form" id="registerForm">
+                <input type="email" class="login-input" id="registerEmail" placeholder="Email" required>
+                <input type="password" class="login-input" id="registerPassword" placeholder="Password (min 6 characters)" required minlength="6">
+                <button type="submit" class="login-button" id="registerSubmitBtn">Register</button>
+                <div class="login-error" id="registerError"></div>
+                <div class="login-divider">or</div>
+                <button type="button" class="google-signin-btn" id="googleSignUpBtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Sign up with Google
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
