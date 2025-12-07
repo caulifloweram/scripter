@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs-18_x"]
 
 [phases.install]
-cmds = ["npm ci"]
+cmds = ["npm ci --omit=dev"]
 
 [phases.build]
-cmds = []
+cmds = ["echo 'Skipping build phase for web deployment'"]
 
 [start]
 cmd = "npm start"
