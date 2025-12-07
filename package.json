@@ -4,7 +4,8 @@
   "description": "A simple script writing application for video and movie scripts",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "node server.js",
+    "electron": "electron .",
     "server": "node server.js",
     "dev": "node server.js",
     "build": "electron-builder --mac",

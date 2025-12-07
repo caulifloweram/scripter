@@ -394,6 +394,18 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Serve static files (frontend)
+app.use(express.static(__dirname));
+
+// Serve index.html for all non-API routes
+app.get('*', (req, res) => {
+    // Don't serve HTML for API routes
+    if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
     if (googleClient && GOOGLE_CLIENT_ID) {

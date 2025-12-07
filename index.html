@@ -2259,7 +2259,10 @@ END OF SCENE ${sceneNumber}
         editor.focus();
 
         // ========== AUTHENTICATION & API ==========
-        const API_URL = 'http://localhost:3000/api';
+        // Automatically detect API URL based on current host
+        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:3000/api'
+            : `${window.location.origin}/api`;
         let authToken = localStorage.getItem('authToken');
         let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
 
